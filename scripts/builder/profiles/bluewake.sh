@@ -23,6 +23,10 @@ PROFILE_TITLE="The Legend of Zelda: The Wind Waker (GameCube USA GZLE01 rev 0)"
 PROFILE_APP_NAME=BlueWake
 PROFILE_BUNDLE_ID=dev.bluewake.BlueWake
 PROFILE_MODULE=gGZLE01_recomp.dylib
+PROFILE_BUILD_MODULE=$PROFILE_MODULE
+PROFILE_GAME_ID=GZLE01
+PROFILE_DISC_ID=GZLE01
+PROFILE_DOL_SHA1=8d28bab68bb5078c38e43f29206f0bd01f7e7a67
 PROFILE_DEFAULT_OUT=build/device
 PROFILE_HAS_MODS=1
 # Bundled optimization profiles, trained on the macOS host: the runtime's
@@ -106,7 +110,9 @@ profile_dependencies() {
 profile_extract() {
     mkdir -p "$out/tools"
     run disc-extract-build clang -O2 -o "$out/tools/disc_extract" scripts/ios/disc_extract.c \
-        apple/ios/src/disc_import.c -Iapple/ios/src
+        apple/ios/src/disc_import.c -Iapple/ios/src \
+        "-DBW_EXPECTED_DISC_ID=\"$PROFILE_DISC_ID\"" \
+        "-DBW_EXPECTED_DOL_SHA1=\"$PROFILE_DOL_SHA1\""
     # disc_extract checks the disc ID (GZLE01) and the executable's hash
     # (revision 0) and refuses anything else.
     run disc-extract "$out/tools/disc_extract" "$iso" "$out/game"
@@ -211,11 +217,12 @@ profile_compile() {
     run composite-configure cmake -S cmake/composite -B "$out/composite-ios" -G Ninja \
         -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 \
         -DCMAKE_OSX_DEPLOYMENT_TARGET=17.0 -DCMAKE_BUILD_TYPE=Release "-DCMAKE_C_FLAGS=$flags" \
+        -DGAME_ID="$PROFILE_GAME_ID" \
         -DCOMPOSITE_OPTIMIZATION_LEVEL="$opt_level" \
         -DCOMPOSITE_DIR="$out/composite-src" -DGXRUNTIME_DIR="$recompcore/GXRuntime" \
         -DABI_DIR="$recompcore/Source/Core/Core/PowerPC/StaticRecomp"
     run composite-build cmake --build "$out/composite-ios" -j "$jobs"
-    module=$out/composite-ios/$PROFILE_MODULE
+    module=$out/composite-ios/$PROFILE_BUILD_MODULE
 }
 
 profile_build_app() {
@@ -229,13 +236,14 @@ profile_build_app() {
         host_flags=$(pgo_flags "$profile_path")
         echo "with the host profile $host_pgo"
     fi
+    local disc_flags="-DBW_EXPECTED_DISC_ID=\\\"$PROFILE_DISC_ID\\\" -DBW_EXPECTED_DOL_SHA1=\\\"$PROFILE_DOL_SHA1\\\""
     run app-configure cmake -S apple/ios -B "$out/app" -G Ninja \
         -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos \
         -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=17.0 \
         -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DPNG_SHARED=OFF \
         -DAURORA_DAWN_PROVIDER=system -DDawn_DIR="$deps/dawn-ios/lib/cmake/Dawn" \
         -DAURORA_SDL3_PROVIDER=vendor -DAURORA_SDL3_LINKAGE=static -DAURORA_DAWN_LINKAGE=static \
-        "-DCMAKE_C_FLAGS=$host_flags" "-DCMAKE_CXX_FLAGS=$host_flags" \
+        "-DCMAKE_C_FLAGS=$host_flags $disc_flags" "-DCMAKE_CXX_FLAGS=$host_flags" \
         '-DCMAKE_IGNORE_PREFIX_PATH=/opt/homebrew;/usr/local' -DCMAKE_DISABLE_FIND_PACKAGE_PkgConfig=ON
     run app-build cmake --build "$out/app" --target BlueWake -j "$jobs"
     app=$out/app/BlueWake.app

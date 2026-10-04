@@ -42,6 +42,27 @@ live in `ref/`. Nothing is uploaded.
 Keep the IPA there or anywhere else that is not synced: iCloud Drive (including a synced Desktop or
 Documents folder), Dropbox and similar would upload it.
 
+### Korean-patched Japanese profile (dj5927 fork)
+
+The `dj5927/Wind-Waker-Recomp` fork includes an experimental `bluewake-kr`
+profile for the Korean-patched Japanese `GZLJ01` revision-0 image used to
+develop this port. The verified image SHA-256 is
+`a012413895affcaadb2f5898796d3c499e5b2a74252cb056f53de846a3e2bad6`,
+and its `main.dol` SHA-1 is
+`6a34b806d270cf6cb01a8246d052de790688acad`.
+
+```sh
+scripts/builder/build.sh "/path/to/korean-patched-gzlj01.iso" \
+  --game bluewake-kr --source-only --no-pgo --no-train
+```
+
+This profile recompiles the patched DOL and all 415 REL modules. Its verified
+composite source digest is
+`77d28fe717e14ffa82e5296a5a56b5acd9358be03ef467652eb6ecd0ea0e3aa6`.
+USA-addressed widescreen and Better Wind Waker patches, plus the USA-trained
+PGO profiles, are disabled. A full iOS device runtime pass is still required
+before treating the Korean profile as release-ready.
+
 ## Local optimization
 
 The developer build reaches about 30 FPS in the measured iPad scenes because it is compiled with an

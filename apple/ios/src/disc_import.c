@@ -13,9 +13,15 @@
 #include <unistd.h>
 
 #define BW_GC_MAGIC 0xC2339F3Du
-// main.dol of GZLE01 USA rev 0, as checked by scripts/prepare.py.
+#ifndef BW_EXPECTED_DISC_ID
+#define BW_EXPECTED_DISC_ID "GZLE01"
+#endif
+#ifndef BW_EXPECTED_DOL_SHA1
+#define BW_EXPECTED_DOL_SHA1 "8d28bab68bb5078c38e43f29206f0bd01f7e7a67"
+#endif
+// main.dol hash for the selected build profile.
 static const char* const kExpectedDolSha1 =
-    "8d28bab68bb5078c38e43f29206f0bd01f7e7a67";
+    BW_EXPECTED_DOL_SHA1;
 
 static int fail(char* error, size_t size, const char* fmt, ...) {
     if (error != NULL && size > 0) {
@@ -164,10 +170,11 @@ int bluewake_disc_check(const char* iso_path, char* error, size_t error_size) {
         rc = fail(error, error_size,
                   "This file is not a GameCube disc image. BlueWake needs an "
                   "uncompressed .iso or .gcm dump of your disc.");
-    else if (memcmp(h, "GZLE01", 6) != 0)
+    else if (memcmp(h, BW_EXPECTED_DISC_ID, 6) != 0)
         rc = fail(error, error_size,
-                  "This is a GameCube disc, but not The Wind Waker (USA, "
-                  "GZLE01). Its id is %.6s.", (const char*)h);
+                  "This is a GameCube disc, but not the Wind Waker revision "
+                  "this build expects (%s). Its id is %.6s.",
+                  BW_EXPECTED_DISC_ID, (const char*)h);
     free(h);
     return rc;
 }
@@ -281,8 +288,8 @@ int bluewake_disc_prepare(const char* iso_path, const char* out_dir,
     const char* also = getenv("BLUEWAKE_ACCEPT_DOL_SHA1");
     if (strcmp(sha, kExpectedDolSha1) != 0 && (also == NULL || strcmp(sha, also) != 0)) {
         fail(error, error_size,
-             "This GZLE01 disc is not the revision BlueWake supports (USA "
-             "revision 0), or the image is damaged.");
+             "This %s disc does not match the executable revision this build "
+             "expects, or the image is damaged.", BW_EXPECTED_DISC_ID);
         goto done;
     }
 
@@ -361,7 +368,8 @@ int bluewake_disc_prepare(const char* iso_path, const char* out_dir,
 
     if (arc_len == 0) {
         fail(error, error_size,
-             "The disc has no RELS.arc; it is not a complete GZLE01 image.");
+             "The disc has no RELS.arc; it is not a complete %s image.",
+             BW_EXPECTED_DISC_ID);
         goto done;
     }
     arc = read_at(f, arc_off, arc_len);
